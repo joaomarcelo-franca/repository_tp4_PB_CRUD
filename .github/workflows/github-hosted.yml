@@ -37,12 +37,6 @@ jobs:
         env:
           DISPLAY: ":99"
 
-      - name: Start Javalin server in background
-        run: |
-          nohup ./gradlew run &> server.log &
-          echo "Aguardando o servidor iniciar..."
-          sleep 10
-
       - name: Run tests with Chrome headless
         env:
           DISPLAY: ":99"

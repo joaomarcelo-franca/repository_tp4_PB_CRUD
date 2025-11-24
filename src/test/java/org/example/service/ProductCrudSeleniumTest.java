@@ -27,7 +27,8 @@ public class ProductCrudSeleniumTest {
 
     // Caminho relativo para funcionar no GitHub Actions
     private final String testImagePath =
-            new File("C:\\Users\\W-11\\Desktop\\FACULDADE\\6 PERIODO\\PB\\TP4_PB\\src\\main\\resources\\public\\uploads\\euekalecmine.png").getAbsolutePath();
+            new File("src/test/resources/euekalecmine.png").getAbsolutePath();
+
 
     @BeforeAll
     void setupAll() {
