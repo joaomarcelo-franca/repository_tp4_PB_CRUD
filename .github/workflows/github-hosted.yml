@@ -51,14 +51,13 @@ jobs:
           sudo apt-get install -y xvfb
           Xvfb :99 -screen 0 1920x1080x24 &>/dev/null &
 
-      - name: Start Application (Javalin) in background
-        run : |
-          nohup ./gradlew run &> app.log &
-          echo "Servidor inicado..."
-          sleep 8 # tempo para subir
+      - name: Start Javalin server in background
+        run: |
+          nohup ./gradlew run &> server.log &
+          echo "Aguardando o servidor iniciar..."
+          sleep 8
 
       - name: Run Gradle tests and generate coverage
-        # export HEADLESS env for the JVM; ajusta se seus testes leem -Dheadless
         env:
           JAVA_OPTS: "-Dheadless=${{ env.HEADLESS }}"
         run: |
