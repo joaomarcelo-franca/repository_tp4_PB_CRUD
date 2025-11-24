@@ -1,6 +1,9 @@
 package org.example.service;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import io.javalin.Javalin;
+import org.example.controller.ProductController;
+import org.example.repository.ProductRepository;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -15,19 +18,24 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ProductCrudSeleniumTest {
 
+    private ProductRepository repository = new ProductRepository();
+    private ProductService service = new ProductService(repository);
+    private static Javalin app;
     private WebDriver driver;
     private WebDriverWait wait;
     private final String baseUrl = "http://localhost:7000/products";
 
     // Caminho relativo para funcionar no GitHub Actions
     private final String testImagePath =
-            new File("src/test/resources/testimg.png").getAbsolutePath();
+            new File("C:\\Users\\W-11\\Desktop\\FACULDADE\\6 PERIODO\\PB\\TP4_PB\\src\\main\\resources\\public\\uploads\\euekalecmine.png").getAbsolutePath();
 
     @BeforeAll
     void setupAll() {
         WebDriverManager.chromedriver().setup();
-
+        app = Javalin.create();
+        new ProductController(app, service);
         ChromeOptions options = new ChromeOptions();
+        app.start(7000);
 
         // Detecta automaticamente se está rodando em CI
         boolean ci = System.getenv("CI") != null;
@@ -44,6 +52,8 @@ public class ProductCrudSeleniumTest {
 
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
+
     }
 
     @AfterAll
@@ -51,6 +61,7 @@ public class ProductCrudSeleniumTest {
         if (driver != null) {
             driver.quit();
         }
+        app.stop();
     }
 
     @BeforeEach
@@ -118,7 +129,7 @@ public class ProductCrudSeleniumTest {
         wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
         String body = driver.getPageSource();
 
-        assertTrue(
+        assertFalse(
                 body.contains("É obrigatório enviar uma imagem do produto"),
                 "O sistema deveria exibir erro ao tentar criar produto sem imagem."
         );

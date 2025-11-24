@@ -16,11 +16,11 @@ public class Main {
         });
 
 
-
+        app.start(7000);
 
         new ProductController(app, service);
 
-        app.start(7000);
+
 
         System.out.println("Servidor rodando: http://localhost:7000/products");
     }
