@@ -19,7 +19,7 @@ public class ProductCrudSeleniumTest {
     private WebDriverWait wait;
     private final String baseUrl = "http://localhost:7000/products";
 
-    // Caminho relativo (GitHub Actions consegue achar)
+    // Caminho relativo para funcionar no GitHub Actions
     private final String testImagePath =
             new File("src/test/resources/testimg.png").getAbsolutePath();
 
@@ -29,34 +29,48 @@ public class ProductCrudSeleniumTest {
 
         ChromeOptions options = new ChromeOptions();
 
-        // HEADLESS ativado no GitHub Actions
-        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "false"));
-        if (headless) {
+        // Detecta automaticamente se está rodando em CI
+        boolean ci = System.getenv("CI") != null;
+
+        if (ci) {
             options.addArguments("--headless=new");
             options.addArguments("--no-sandbox");
             options.addArguments("--disable-dev-shm-usage");
         }
 
+        options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--disable-gpu");
+        options.addArguments("--window-size=1920,1080");
+
         driver = new ChromeDriver(options);
-        wait = new WebDriverWait(driver, Duration.ofSeconds(8));
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
 
     @AfterAll
     void teardownAll() {
-        if (driver != null) driver.quit();
+        if (driver != null) {
+            driver.quit();
+        }
     }
 
     @BeforeEach
     void openProductsPage() {
         driver.get(baseUrl);
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
     }
 
     // -----------------------------
-    // TESTE 1: Criar Produto
+    // TESTE 1: Criar Produto com imagem
     // -----------------------------
     @Test
     void testAddProductSuccessfully() {
-        driver.findElement(By.linkText("Adicionar Novo Produto")).click();
+
+        // Garantir que o botão existe
+        WebElement addButton = wait.until(
+                ExpectedConditions.elementToBeClickable(By.linkText("Adicionar Novo Produto"))
+        );
+        addButton.click();
+
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("name")));
 
         driver.findElement(By.id("name")).sendKeys("Produto Selenium");
@@ -64,8 +78,11 @@ public class ProductCrudSeleniumTest {
         driver.findElement(By.id("quantity")).sendKeys("10");
         driver.findElement(By.id("category")).sendKeys("Teste");
 
-        // imagem local do projeto
-        driver.findElement(By.id("image")).sendKeys(testImagePath);
+        // Upload seguro
+        File img = new File(testImagePath);
+        assertTrue(img.exists(), "A imagem de teste não existe no repositório!");
+
+        driver.findElement(By.id("image")).sendKeys(img.getAbsolutePath());
 
         driver.findElement(By.cssSelector("button.btn-success")).click();
 
@@ -83,7 +100,12 @@ public class ProductCrudSeleniumTest {
     // -----------------------------
     @Test
     void testAddProductWithoutImageMustFail() {
-        driver.findElement(By.linkText("Adicionar Novo Produto")).click();
+
+        WebElement addButton = wait.until(
+                ExpectedConditions.elementToBeClickable(By.linkText("Adicionar Novo Produto"))
+        );
+        addButton.click();
+
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("name")));
 
         driver.findElement(By.id("name")).sendKeys("Produto Sem Imagem");
@@ -107,17 +129,28 @@ public class ProductCrudSeleniumTest {
     // -----------------------------
     @Test
     void testEditProduct() {
+
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
         WebElement table = driver.findElement(By.tagName("table"));
 
-        assertTrue(table.getText().length() > 10, "A tabela deve conter produtos antes de editar.");
+        // Se não houver produtos, cria um primeiro
+        if (!table.getText().contains("Produto Selenium")) {
+            System.out.println("Nenhum produto encontrado. Criando um antes de editar.");
+            testAddProductSuccessfully();
+            driver.get(baseUrl);
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
+            table = driver.findElement(By.tagName("table"));
+        }
 
         WebElement editButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("a.btn-warning"))
         );
         editButton.click();
 
-        WebElement nameInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("name")));
+        WebElement nameInput = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.id("name"))
+        );
+
         nameInput.clear();
         nameInput.sendKeys("Produto Editado Selenium");
 
@@ -137,10 +170,20 @@ public class ProductCrudSeleniumTest {
     // -----------------------------
     @Test
     void testDeleteProduct() {
+
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
         WebElement table = driver.findElement(By.tagName("table"));
 
-        int beforeCount = table.findElements(By.cssSelector("tr")).size();
+        int beforeCount = table.findElements(By.cssSelector("tbody tr")).size();
+
+        if (beforeCount == 0) {
+            System.out.println("Nenhum produto para deletar. Criando um...");
+            testAddProductSuccessfully();
+            driver.get(baseUrl);
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
+            table = driver.findElement(By.tagName("table"));
+            beforeCount = table.findElements(By.cssSelector("tbody tr")).size();
+        }
 
         WebElement deleteButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.cssSelector("form button.btn-danger"))
@@ -150,7 +193,7 @@ public class ProductCrudSeleniumTest {
         wait.until(ExpectedConditions.stalenessOf(deleteButton));
 
         table = driver.findElement(By.tagName("table"));
-        int afterCount = table.findElements(By.cssSelector("tr")).size();
+        int afterCount = table.findElements(By.cssSelector("tbody tr")).size();
 
         assertTrue(
                 afterCount < beforeCount,
