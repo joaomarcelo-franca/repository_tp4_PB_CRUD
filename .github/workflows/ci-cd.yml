@@ -142,6 +142,7 @@ jobs:
       - name: Upload package to release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: artifact-ci-${{ github.run_id }}
           files: build/releases/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
