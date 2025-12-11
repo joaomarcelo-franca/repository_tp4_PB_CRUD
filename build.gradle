@@ -88,7 +88,7 @@ jacocoTestCoverageVerification {
             element = 'CLASS'
             limit {
                 counter = 'INSTRUCTION'
-                value = 'COVERED_RATIO'
+                value = 'COVEREDRATIO'
                 minimum = 0.80 // 80% de cobertura mínima
             }
         }
