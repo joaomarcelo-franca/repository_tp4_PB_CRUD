@@ -2,6 +2,7 @@ package org.example;
 
 import io.javalin.Javalin;
 import org.example.controller.ProductController;
+import org.example.service.FileService;
 import org.example.service.ProductService;
 import org.example.repository.ProductRepository;
 
@@ -10,6 +11,7 @@ public class Main {
 
         ProductRepository repository = new ProductRepository();
         ProductService service = new ProductService(repository);
+        FileService fileService = new FileService();
 
         Javalin app = Javalin.create(config -> {
             config.staticFiles.add("/public", io.javalin.http.staticfiles.Location.CLASSPATH);
