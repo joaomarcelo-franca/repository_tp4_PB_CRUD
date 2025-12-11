@@ -1,1 +1,2 @@
 [![CI - Build, Test & Coverage](https://github.com/joaomarcelo-franca/repository_tp4_PB_CRUD/actions/workflows/github-hosted.yml/badge.svg)](https://github.com/joaomarcelo-franca/repository_tp4_PB_CRUD/actions/workflows/github-hosted.yml)
+[![CI - Build, Test, Coverage & Package](https://github.com/joaomarcelo-franca/repository_tp4_PB_CRUD/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/joaomarcelo-franca/repository_tp4_PB_CRUD/actions/workflows/ci-cd.yml)
