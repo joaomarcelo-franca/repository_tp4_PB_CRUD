@@ -15,22 +15,6 @@ public class ProductService {
 
     public Product create(String name, double price, int quantity, String category, String imagePath) {
 
-        if (name == null || name.isBlank())
-            throw new IllegalArgumentException("Nome inválido");
-
-        if (price < 0)
-            throw new IllegalArgumentException("Preço inválido");
-
-        if (quantity < 0)
-            throw new IllegalArgumentException("Quantidade inválida");
-
-        if (category == null || category.isBlank())
-            throw new IllegalArgumentException("Categoria inválida");
-
-        if (imagePath == null || imagePath.isBlank()) {
-            throw new IllegalArgumentException("É obrigatório enviar uma imagem do produto.");
-        }
-
         Product product = new Product(name, price, quantity, category, imagePath);
 
         return repository.create(product);

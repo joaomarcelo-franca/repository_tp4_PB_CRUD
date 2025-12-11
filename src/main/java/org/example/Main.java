@@ -18,7 +18,7 @@ public class Main {
 
         app.start(7000);
 
-        new ProductController(app, service);
+        new ProductController(app, service, fileService);
 
 
 

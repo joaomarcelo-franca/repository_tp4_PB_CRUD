@@ -28,17 +28,17 @@ public class ProductRepository {
         Product existing = findById(id);
         if (existing == null) return false;
 
-        existing.setName(updatedProduct.getName());
-        existing.setPrice(updatedProduct.getPrice());
-        existing.setQuantity(updatedProduct.getQuantity());
-        existing.setCategory(updatedProduct.getCategory());
-
-        if (updatedProduct.getImagePath() != null && !updatedProduct.getImagePath().isBlank()) {
-            existing.setImagePath(updatedProduct.getImagePath());
-        }
+        existing.update(
+                updatedProduct.getName(),
+                updatedProduct.getPrice(),
+                updatedProduct.getQuantity(),
+                updatedProduct.getCategory(),
+                updatedProduct.getImagePath()
+        );
 
         return true;
     }
+
 
     public boolean delete(int id) {
         Product p = findById(id);

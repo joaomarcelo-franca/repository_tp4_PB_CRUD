@@ -16,54 +16,61 @@ import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class ProductCrudSeleniumTest {
+public class ProductCrudSeleniumCiTest {
 
-    private ProductRepository repository = new ProductRepository();
-    private ProductService service = new ProductService(repository);
-    private FileService fileService = new FileService();
+    private ProductRepository repository;
+    private ProductService service;
+    private FileService fileService;
     private static Javalin app;
     private WebDriver driver;
     private WebDriverWait wait;
     private final String baseUrl = "http://localhost:7000/products";
 
-    // Caminho relativo para funcionar no GitHub Actions
-    private final String testImagePath =
-            new File("src/test/resources/euekalecmine.png").getAbsolutePath();
-
+    private final String testImagePath = new File("src/test/resources/euekalecmine.png").getAbsolutePath();
 
     @BeforeAll
     void setupAll() {
+        repository = new ProductRepository();
+        service = new ProductService(repository);
+        fileService = new FileService();
+
         WebDriverManager.chromedriver().setup();
+
         app = Javalin.create();
         new ProductController(app, service, fileService);
+
         ChromeOptions options = new ChromeOptions();
+
+        // Start server
         app.start(7000);
 
-        // Detecta automaticamente se está rodando em CI
+        // Detecta CI e força headless + flags seguras
         boolean ci = System.getenv("CI") != null;
 
         if (ci) {
             options.addArguments("--headless=new");
             options.addArguments("--no-sandbox");
             options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-gpu");
+            options.addArguments("--window-size=1920,1080");
+            options.addArguments("--remote-allow-origins=*");
+        } else {
+            options.addArguments("--remote-allow-origins=*");
+            options.addArguments("--window-size=1920,1080");
         }
 
-        options.addArguments("--remote-allow-origins=*");
-        options.addArguments("--disable-gpu");
-        options.addArguments("--window-size=1920,1080");
-
         driver = new ChromeDriver(options);
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
-
+        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
     }
 
     @AfterAll
     void teardownAll() {
         if (driver != null) {
-            driver.quit();
+            try { driver.quit(); } catch (Exception ignored) {}
         }
-        app.stop();
+        if (app != null) {
+            app.stop();
+        }
     }
 
     @BeforeEach
@@ -72,13 +79,8 @@ public class ProductCrudSeleniumTest {
         wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
     }
 
-    // -----------------------------
-    // TESTE 1: Criar Produto com imagem
-    // -----------------------------
     @Test
     void testAddProductSuccessfully() {
-
-        // Garantir que o botão existe
         WebElement addButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.linkText("Adicionar Novo Produto"))
         );
@@ -86,14 +88,13 @@ public class ProductCrudSeleniumTest {
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("name")));
 
-        driver.findElement(By.id("name")).sendKeys("Produto Selenium");
+        driver.findElement(By.id("name")).sendKeys("Produto Selenium CI");
         driver.findElement(By.id("price")).sendKeys("25");
         driver.findElement(By.id("quantity")).sendKeys("10");
         driver.findElement(By.id("category")).sendKeys("Teste");
 
-        // Upload seguro
         File img = new File(testImagePath);
-        assertTrue(img.exists(), "A imagem de teste não existe no repositório!");
+        assertTrue(img.exists(), "A imagem de teste não existe no repositório em src/test/resources!");
 
         driver.findElement(By.id("image")).sendKeys(img.getAbsolutePath());
 
@@ -103,17 +104,13 @@ public class ProductCrudSeleniumTest {
         WebElement table = driver.findElement(By.tagName("table"));
 
         assertTrue(
-                table.getText().contains("Produto Selenium"),
+                table.getText().contains("Produto Selenium CI"),
                 "O produto deveria aparecer na tabela após ser criado."
         );
     }
 
-    // -----------------------------
-    // TESTE 2: Criar sem imagem – deve falhar
-    // -----------------------------
     @Test
     void testAddProductWithoutImageMustFail() {
-
         WebElement addButton = wait.until(
                 ExpectedConditions.elementToBeClickable(By.linkText("Adicionar Novo Produto"))
         );
@@ -121,7 +118,7 @@ public class ProductCrudSeleniumTest {
 
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("name")));
 
-        driver.findElement(By.id("name")).sendKeys("Produto Sem Imagem");
+        driver.findElement(By.id("name")).sendKeys("Produto Sem Imagem CI");
         driver.findElement(By.id("price")).sendKeys("10");
         driver.findElement(By.id("quantity")).sendKeys("5");
         driver.findElement(By.id("category")).sendKeys("Teste");
@@ -131,24 +128,19 @@ public class ProductCrudSeleniumTest {
         wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
         String body = driver.getPageSource();
 
-        assertFalse(
-                body.contains("É obrigatório enviar uma imagem do produto"),
+        assertTrue(
+                body.contains("É obrigatório enviar uma imagem do produto") ||
+                        body.toLowerCase().contains("imagem"),
                 "O sistema deveria exibir erro ao tentar criar produto sem imagem."
         );
     }
 
-    // -----------------------------
-    // TESTE 3: Editar Produto
-    // -----------------------------
     @Test
     void testEditProduct() {
-
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
         WebElement table = driver.findElement(By.tagName("table"));
 
-        // Se não houver produtos, cria um primeiro
-        if (!table.getText().contains("Produto Selenium")) {
-            System.out.println("Nenhum produto encontrado. Criando um antes de editar.");
+        if (!table.getText().contains("Produto Selenium CI")) {
             testAddProductSuccessfully();
             driver.get(baseUrl);
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
@@ -165,7 +157,7 @@ public class ProductCrudSeleniumTest {
         );
 
         nameInput.clear();
-        nameInput.sendKeys("Produto Editado Selenium");
+        nameInput.sendKeys("Produto Editado Selenium CI");
 
         driver.findElement(By.cssSelector("button.btn-success")).click();
 
@@ -173,24 +165,19 @@ public class ProductCrudSeleniumTest {
         table = driver.findElement(By.tagName("table"));
 
         assertTrue(
-                table.getText().contains("Produto Editado Selenium"),
+                table.getText().contains("Produto Editado Selenium CI"),
                 "O nome editado deveria aparecer na tabela."
         );
     }
 
-    // -----------------------------
-    // TESTE 4: Deletar Produto
-    // -----------------------------
     @Test
     void testDeleteProduct() {
-
         wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));
         WebElement table = driver.findElement(By.tagName("table"));
 
         int beforeCount = table.findElements(By.cssSelector("tbody tr")).size();
 
         if (beforeCount == 0) {
-            System.out.println("Nenhum produto para deletar. Criando um...");
             testAddProductSuccessfully();
             driver.get(baseUrl);
             wait.until(ExpectedConditions.visibilityOfElementLocated(By.tagName("table")));

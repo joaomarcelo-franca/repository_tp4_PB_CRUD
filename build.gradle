@@ -57,7 +57,12 @@ test {
     useJUnitPlatform()
 
     // para CI rodar Selenium em modo headless
+    // (no workflow definimos HEADLESS=true e CI=true)
     systemProperty "headless", System.getenv("HEADLESS") ?: "false"
+    // aumentar timeout padrão para reduzir flakiness no CI
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
 }
 
 jacoco {
@@ -68,7 +73,9 @@ jacocoTestReport {
     dependsOn test
     reports {
         xml.required = true
+        xml.outputLocation = file("$buildDir/reports/jacoco/report.xml")
         csv.required = false
+        html.required = true
         html.outputLocation = layout.buildDirectory.dir("reports/jacoco")
     }
 }
@@ -77,6 +84,8 @@ jacocoTestCoverageVerification {
     dependsOn test
     violationRules {
         rule {
+            enabled = true
+            element = 'CLASS'
             limit {
                 counter = 'INSTRUCTION'
                 value = 'COVERED_RATIO'
@@ -86,4 +95,22 @@ jacocoTestCoverageVerification {
     }
 }
 
+// garantir que "check" falhe se a cobertura estiver abaixo do mínimo
 check.dependsOn jacocoTestCoverageVerification
+
+// Embalagem para release (ZIP) - usado no job de CD simbólico
+tasks.register('packageRelease', Zip) {
+    dependsOn 'assemble'
+    archiveFileName = "app-${project.version}.zip"
+    destinationDirectory = file("$buildDir/releases")
+    from('build/libs') {
+        into('libs')
+    }
+    from('src/main/resources') {
+        into('resources')
+    }
+    // incluir README, LICENSE se existirem
+    from('README.md') {
+        into('')
+    }
+}

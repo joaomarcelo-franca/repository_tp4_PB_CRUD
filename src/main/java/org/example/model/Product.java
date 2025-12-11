@@ -24,6 +24,10 @@ public class Product {
         if (category == null || category.isBlank())
             throw new IllegalArgumentException("Categoria é obrigatória");
 
+        if (imagePath == null || imagePath.isBlank()) {
+            throw new IllegalArgumentException("É obrigatório enviar uma imagem do produto.");
+        }
+
         this.id = sequence;
         this.name = name;
         this.price = price;
@@ -79,4 +83,16 @@ public class Product {
     public String getCategory() {
         return category;
     }
+
+    public void update(String name, double price, int quantity, String category, String imagePath) {
+        setName(name);
+        setPrice(price);
+        setQuantity(quantity);
+        setCategory(category);
+
+        if (imagePath != null && !imagePath.isBlank()) {
+            setImagePath(imagePath);
+        }
+    }
+
 }
