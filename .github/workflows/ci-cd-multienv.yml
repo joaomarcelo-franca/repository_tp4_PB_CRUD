@@ -13,7 +13,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write  # Necessário para OIDC
+  id-token: write
   actions: read
 
 env:
@@ -52,13 +52,27 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
 
-    environment: ${{
-      github.ref_name == 'develop' && 'dev' ||
-      github.ref_name == 'main' && 'test' ||
-      github.event.inputs.deploy_prod == 'true' && 'prod'
-  }}
-
     steps:
+      - name: Determine environment
+        id: envselect
+        run: |
+          # Detect environment based on branch or manual trigger
+          if [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
+            echo "env=dev" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "env=test" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.inputs.deploy_prod }}" == "true" ]]; then
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "env=unknown" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fail if environment is unknown
+        if: steps.envselect.outputs.env == 'unknown'
+        run: |
+          echo "Ambiente desconhecido. Deploy cancelado."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -68,20 +82,18 @@ jobs:
           name: build-jar
           path: app
 
-      - name: Logging custom
+      - name: Custom Log Summary
         run: |
-          echo "### 🚀 DEPLOY SUMMARY" >> $GITHUB_STEP_SUMMARY
-          echo "- Ambiente: **${{ job.environment.name }}**" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Ambiente: **${{ steps.envselect.outputs.env }}**" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: $GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
 
-      - name: Configure Cloud Provider (OIDC)
-        run: echo "OIDC configuration placeholder (AWS/GCP/Azure)"
+      - name: Configure Cloud (OIDC Ready)
+        run: echo "OIDC configuration placeholder"
 
-      - name: Deploy to Environment
+      - name: Deploy to environment
         run: |
-          echo "Deploying to ${{ job.environment.name }} ..."
-          # Exemplo fictício de deploy
-          # aws s3 cp app/*.jar s3://meu-bucket/${{ job.environment.name }}/
+          echo "Deploying to ${{ steps.envselect.outputs.env }} ..."
           echo "Deploy finalizado!"
 
   post-deploy-test:
@@ -112,8 +124,7 @@ jobs:
 
       - name: Run Selenium Tests (post-deploy)
         env:
-          TARGET_ENV: ${{ job.environment.name }}
-          DEPLOY_URL: ${{ vars.DEPLOY_URL }}
+          TARGET_ENV: ${{ needs.deploy.outputs.env }}
         run: |
           echo "Rodando testes pós deploy no ambiente: $TARGET_ENV"
           ./gradlew seleniumTest --no-daemon
