@@ -100,7 +100,7 @@ jobs:
   deploy-test:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/prod'
     environment: staging
 
     steps:
@@ -115,12 +115,12 @@ jobs:
           echo "Aplicação implantada em TEST"
 
   # ============================================================
-  # 4) DEPLOY PRODUÇÃO
+  # 4) DEPLOY PRODUÇÃO (prod)
   # ============================================================
   deploy-prod:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/prod'
+    if: github.ref == 'refs/heads/main'
 
     environment:
       name: production
