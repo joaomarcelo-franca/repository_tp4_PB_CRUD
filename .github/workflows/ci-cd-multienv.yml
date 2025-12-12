@@ -100,7 +100,7 @@ jobs:
   deploy-test:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/prod'
+    if: github.ref == 'refs/heads/main'
     environment: staging
 
     steps:
@@ -120,7 +120,7 @@ jobs:
   deploy-prod:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/prod'
 
     environment:
       name: production
