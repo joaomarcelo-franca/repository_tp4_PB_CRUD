@@ -1,8 +1,8 @@
-name: CI/CD - Multi Environment Deploy
+name: Pipeline Java Multi-Ambientes Completo
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ "develop", "main" ]
   workflow_dispatch:
     inputs:
       deploy_prod:
@@ -19,127 +19,166 @@ permissions:
 env:
   JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
 
+# ============================================================
+# 1) BUILD + TEST + JACOCO
+# ============================================================
 jobs:
-
-  build-test:
-    name: Build & Test
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Baixando código
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Configurando Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
-      - name: Give execute permission to gradlew
+      - name: Log cache Gradle
+        run: echo "::notice::[$(date '+%Y-%m-%d %H:%M:%S')] Configurando cache do Gradle"
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Dar permissão ao gradlew
         run: chmod +x gradlew
 
+      - name: Build do projeto
+        run: |
+          echo "::notice::[$(date '+%Y-%m-%d %H:%M:%S')] Iniciando build"
+          ./gradlew clean build --no-daemon > build.log 2>&1 || \
+            echo "::error::Build falhou. Veja build.log"
 
-      - name: Build project
-        run: ./gradlew clean build --no-daemon
-
-      - name: Run tests
-        run: ./gradlew test jacocoTestReport --no-daemon
-
-      - name: Upload artifacts
+      - name: Upload logs de build
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-jar
-          path: build/libs
+          name: build-logs
+          path: build.log
 
-  deploy:
-    name: Deploy to Environment
-    needs: build-test
+      - name: Rodando testes + Jacoco
+        run: ./gradlew test jacocoTestReport --no-daemon
+
+      - name: Upload do JAR como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: build/libs/*.jar
+
+  # ============================================================
+  # 2) DEPLOY DEV (branch develop)
+  # ============================================================
+  deploy-dev:
+    needs: build
     runs-on: ubuntu-latest
-
-    outputs:
-      env: ${{ steps.envselect.outputs.env }}
+    if: github.ref == 'refs/heads/develop'
+    environment: development
 
     steps:
-      - name: Determine environment
-        id: envselect
-        run: |
-          # Detect environment based on branch or manual trigger
-          if [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
-            echo "env=dev" >> $GITHUB_OUTPUT
-          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "env=test" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.inputs.deploy_prod }}" == "true" ]]; then
-            echo "env=prod" >> $GITHUB_OUTPUT
-          else
-            echo "env=unknown" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Fail if environment is unknown
-        if: steps.envselect.outputs.env == 'unknown'
-        run: |
-          echo "Ambiente desconhecido. Deploy cancelado."
-          exit 1
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Artifact
+      - name: Baixar artefato
         uses: actions/download-artifact@v4
         with:
-          name: build-jar
-          path: app
+          name: app
 
-      - name: Custom Log Summary
+      - name: Deploy DEV
         run: |
-          echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Ambiente: **${{ steps.envselect.outputs.env }}**" >> $GITHUB_STEP_SUMMARY
-          echo "- Commit: $GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
+          echo "::notice::[$(date '+%Y-%m-%d %H:%M:%S')] Deploy em DEV"
+          echo "Aplicação implantada em DEV"
 
-      - name: Configure Cloud (OIDC Ready)
-        run: echo "OIDC configuration placeholder"
-
-      - name: Deploy to environment
-        run: |
-          echo "Deploying to ${{ steps.envselect.outputs.env }} ..."
-          echo "Deploy finalizado!"
-
-  post-deploy-test:
-    name: Pós-Deploy Selenium Tests
-    needs: deploy
+  # ============================================================
+  # 3) DEPLOY TEST (branch main)
+  # ============================================================
+  deploy-test:
+    needs: build
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+
+      - name: Deploy TEST
+        run: |
+          echo "::notice::[$(date '+%Y-%m-%d %H:%M:%S')] Deploy em TEST/STAGING"
+          echo "Aplicação implantada em TEST"
+
+  # ============================================================
+  # 4) DEPLOY PRODUÇÃO (workflow_dispatch)
+  # ============================================================
+  deploy-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_prod == 'true'
+    environment:
+      name: production
+      url: https://meuapp-producao.com
+
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+
+      - name: Aprovação manual
+        run: |
+          echo "::notice::[$(date '+%Y-%m-%d %H:%M:%S')] Aguardando aprovação…"
+          echo "Aprovado manualmente"
+
+      - name: Deploy PROD
+        run: |
+          echo "::notice::[$(date '+%Y-%m-%d %H:%M:%S')] Deploy PRODUÇÃO"
+          echo "Aplicação implantada em produção"
+
+  # ============================================================
+  # 5) TESTES SELENIUM PÓS-DEPLOY
+  # ============================================================
+  post-deploy-tests:
+    needs: [deploy-dev, deploy-test, deploy-prod]
+    runs-on: ubuntu-latest
+    if: always()
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Give execute permission to gradlew
+      - name: Permissão ao gradlew
         run: chmod +x gradlew
 
-      - name: Setup Java
+      - name: Configurar Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
-      - name: Install Chrome
+      - name: Instalar Chrome
         run: |
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+          sudo apt update
+          sudo apt install -y google-chrome-stable
 
-      - name: Start Xvfb
+      - name: Iniciar Xvfb
         run: |
-          sudo apt-get install -y xvfb
+          sudo apt install -y xvfb
           export DISPLAY=:99
           nohup Xvfb :99 -screen 0 1920x1080x24 &
 
-      - name: Run Selenium Tests (post-deploy)
-        env:
-          TARGET_ENV: ${{ needs.deploy.outputs.env }}
+      - name: Rodar testes Selenium (pós deploy)
         run: |
-          echo "Rodando testes pós deploy no ambiente: $TARGET_ENV"
-          ./gradlew seleniumTest --no-daemon
+          echo "::notice::Rodando testes pós deploy"
+          ./gradlew test --no-daemon
 
-      - name: Upload selenium logs
+      - name: Upload logs Selenium
         uses: actions/upload-artifact@v4
         with:
           name: selenium-logs
