@@ -35,6 +35,10 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Give execute permission to gradlew
+        run: chmod +x gradlew
+
+
       - name: Build project
         run: ./gradlew clean build --no-daemon
 
