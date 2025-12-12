@@ -115,7 +115,7 @@ jobs:
           echo "Aplicação implantada em TEST"
 
   # ============================================================
-  # 4) DEPLOY PRODUÇÃO (prod)
+  # 4) DEPLOY PRODUÇÃO ( prod )
   # ============================================================
   deploy-prod:
     needs: build
