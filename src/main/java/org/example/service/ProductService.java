@@ -37,21 +37,6 @@ public class ProductService {
 
         Product existing = repository.findById(id);
 
-        if (existing == null)
-            throw new IllegalArgumentException("ID inválido, produto não encontrado");
-
-        if (name == null || name.isBlank())
-            throw new IllegalArgumentException("Nome inválido");
-
-        if (price < 0)
-            throw new IllegalArgumentException("Preço inválido");
-
-        if (quantity < 0)
-            throw new IllegalArgumentException("Quantidade inválida");
-
-        if (category == null || category.isBlank())
-            throw new IllegalArgumentException("Categoria inválida");
-
         Product updated = new Product(name, price, quantity, category, imagePath);
 
         return repository.update(id, updated);
