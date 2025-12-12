@@ -17,6 +17,10 @@ application {
     mainClass = 'org.example.Main'
 }
 
+
+
+
+
 repositories {
     mavenCentral()
 }
