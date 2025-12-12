@@ -95,7 +95,7 @@ jobs:
           echo "Aplicação implantada em DEV"
 
   # ============================================================
-  # 3) DEPLOY TEST (branch main)
+  # 3) DEPLOY TEST (branch main) .
   # ============================================================
   deploy-test:
     needs: build
