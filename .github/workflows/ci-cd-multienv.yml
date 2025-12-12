@@ -56,6 +56,9 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
 
+    outputs:
+      env: ${{ steps.envselect.outputs.env }}
+
     steps:
       - name: Determine environment
         id: envselect

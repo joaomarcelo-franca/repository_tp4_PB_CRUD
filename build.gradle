@@ -115,3 +115,19 @@ tasks.register('packageRelease', Zip) {
         into('')
     }
 }
+
+tasks.register("seleniumTest", Test) {
+    description = "Executa testes Selenium após o deploy"
+    group = "verification"
+
+    useJUnitPlatform()
+
+    systemProperty "headless", System.getenv("HEADLESS") ?: "true"
+
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    testLogging {
+        events "passed", "failed"
+    }
+}
