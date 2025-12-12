@@ -109,6 +109,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Give execute permission to gradlew
+        run: chmod +x gradlew
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
