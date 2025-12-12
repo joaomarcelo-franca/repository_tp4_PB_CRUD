@@ -115,12 +115,13 @@ jobs:
           echo "Aplicação implantada em TEST"
 
   # ============================================================
-  # 4) DEPLOY PRODUÇÃO (workflow_dispatch)
+  # 4) DEPLOY PRODUÇÃO
   # ============================================================
   deploy-prod:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event.inputs.deploy_prod == 'true'
+    if: github.ref == 'refs/heads/prod'
+
     environment:
       name: production
       url: https://meuapp-producao.com
